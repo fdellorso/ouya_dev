@@ -1,0 +1,4 @@
+linux-build/
+linux-modules/
+linux-dtbs/
+zImage*

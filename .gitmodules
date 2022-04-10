@@ -1,0 +1,6 @@
+[submodule "mkbootimg"]
+	path = mkbootimg
+	url = https://github.com/osm0sis/mkbootimg
+[submodule "linux"]
+	path = linux
+	url = https://github.com/torvalds/linux
