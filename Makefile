@@ -1,4 +1,4 @@
-export LINUX_DIR			:= linux
+export LINUX_DIR			:= linux-5.17.2
 export KBUILD_DIR			:= linux-build
 export KERNEL_MODULES		:= linux-modules
 export KERNEL_DTBS			:= linux-dtbs
