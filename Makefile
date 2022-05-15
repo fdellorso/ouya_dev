@@ -1,4 +1,5 @@
-export LINUX_DIR			:= linux-5.17.2
+# export LINUX_DIR			:= linux
+export LINUX_DIR			:= kernel
 export KBUILD_DIR			:= linux-build
 export KERNEL_MODULES		:= linux-modules
 export KERNEL_DTBS			:= linux-dtbs
@@ -60,7 +61,7 @@ kernel_dtb:
 
 
 kernel_bootimg:
-	./mkbootimgbin --kernel zImage --ramdisk /dev/null --output zImage-518
+	./mkbootimg/mkbootimg --kernel zImage --ramdisk /dev/null --output zImage-518
 
 
 copy_lib:
