@@ -5,6 +5,9 @@ CONFIG_ATAGS is not set
 CONFIG_ARM_APPENDED_DTB=y
 CONFIG_CMDLINE="android.kerneltype=normal androidboot.serialno=015d4906e123f807 video=tegrafb fbcon=map:0 gpt gpt_sector=15073279 console=tty1 console=ttyS0,115200n8 no_console_suspend=1 root=/dev/sda1 rootfstype=ext4 rw rootwait fsck.repair=yes"
 AUTOFS4
+IPTABLES
+GPIO & PWM FAN
+
 
 make -C linux O=../linux-build -j4 zImage modules dtbs
 make -C linux O=../linux-build -j4 INSTALL_MOD_PATH=../linux-modules modules_install

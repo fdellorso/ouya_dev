@@ -1,10 +1,10 @@
-# export LINUX_DIR			:= linux
-export LINUX_DIR			:= kernel
+export LINUX_DIR			:= linux
+# export LINUX_DIR			:= kernel
 export KBUILD_DIR			:= linux-build
 export KERNEL_MODULES		:= linux-modules
 export KERNEL_DTBS			:= linux-dtbs
 
-export NPROCS:=2
+export NPROCS:=8
 
 export OS:=$(shell uname -s)
 # ifeq($(OS),Linux)
@@ -61,7 +61,7 @@ kernel_dtb:
 
 
 kernel_bootimg:
-	./mkbootimg/mkbootimg --kernel zImage --ramdisk /dev/null --output zImage-518
+	./mkbootimg/mkbootimg --kernel zImage --ramdisk /dev/null --output zImage-519
 
 
 copy_lib:
