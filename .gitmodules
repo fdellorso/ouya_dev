@@ -1,6 +1,6 @@
 [submodule "mkbootimg"]
 	path = mkbootimg
 	url = https://github.com/osm0sis/mkbootimg
-[submodule "kernel"]
-	path = kernel
+[submodule "linux"]
+	path = linux
 	url = git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
