@@ -1,0 +1,41 @@
+:root {
+    --bgBody: #18191a;
+    --bgBar: #18191a80;
+    --bgSection: #242526;
+    --fgIconLight: #b0b3b8;
+    --bgIconLight: #3a3b3c;
+    --maxValuePx: 9007199254740992px;
+    --bsBlue: #007bff;
+    --bsGreen: #28a745;
+    --bsRed: #dc3545;
+    --bsViolet: #7952b3;
+    --bsGray: #e9ecef;
+}
+  
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+body {
+    background-color: var(--bsGray);
+}
+
+.glass {
+    background-color: rgba(255, 255, 255, 0.33) !important;
+    -webkit-backdrop-filter: saturate(180%) blur(1rem) !important;
+    backdrop-filter: saturate(200%) blur(1rem) !important;
+}
+
+.skipLink {
+    display: none;
+}
+
+@media all and (display-mode: standalone) {
+    body {
+        background-color: yellow;
+    }
+}

@@ -61,7 +61,7 @@ kernel_dtb:
 
 
 kernel_bootimg:
-	./mkbootimg/mkbootimg --kernel zImage --ramdisk /dev/null --output zImage-519
+	./mkbootimg/mkbootimg --kernel zImage --ramdisk /dev/null --output zImage-616
 
 
 copy_lib:

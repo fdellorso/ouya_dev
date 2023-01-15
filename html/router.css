@@ -1,0 +1,42 @@
+body {
+    --navWidth: 25vw;
+    margin: 0 0 0 var(--navWidth);
+    font-family: "Quicksand", sans-serif;
+    font-size: 18px;
+}
+
+.nav__body {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--navWidth);
+    height: 100vh;
+    background: var(--bgBody);
+}
+
+.nav__link {
+    display: block;
+    padding: 12px 18px;
+    text-decoration: none;
+    color: var(--bsGray);
+    font-weight: 500;
+}
+
+.nav__link:hover {
+    color: var(--bsRed);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+#app {
+    margin: 2em;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+a {
+    color: var(--bgBody);
+}
+
+a:hover {
+    color: var(--bsRed);
+}
