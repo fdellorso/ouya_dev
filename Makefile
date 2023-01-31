@@ -18,7 +18,7 @@ export CORES				:= -j$(NPROCS)
 export ARCH					:= arm
 export CROSS_COMPILE		:= arm-linux-gnueabihf-
 
-.PHONY: config 				configpatch			\
+.PHONY: config 				config_patch			\
 		menuconfig								\
 		kernel				kernel_dtb			\
 		kernel_bootimg					 		\
@@ -34,9 +34,9 @@ config:
 
 config_patch:
 	mkdir -p $(KBUILD_DIR)
-	# if ! patch -R -p0 -s -f --dry-run patch $(KBUILD_DIR)/.config kernel-patch/defconfig.patch; then \
-	# 	patch $(KBUILD_DIR)/.config kernel-patch/defconfig.patch; \
-	# fi
+	if ! patch -R -p0 -s -f --dry-run patch $(KBUILD_DIR)/.config linux-config/config.patch; then \
+		patch $(KBUILD_DIR)/.config linux-config/config.patch; \
+	fi
 
 
 menuconfig:
