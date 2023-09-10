@@ -19,11 +19,23 @@ export ARCH					:= arm
 export CROSS_COMPILE		:= arm-linux-gnueabihf-
 
 .PHONY: config 				config_patch			\
-		menuconfig								\
+		menuconfig				\
+		prepare		modules_prepare		\
+		clean				\
 		kernel				kernel_dtb			\
 		kernel_bootimg					 		\
 		copy_lib						 		\
 		clean_kernel 		reset_kernel		\
+
+
+# ZFS
+# linux -> make prepare
+# sh ./autogen.sh
+# export LINUX_DIR=/home/fdellorso/Develop/ouya_dev/linux
+# export LINUX_DIR_OBJ=/home/fdellorso/Develop/ouya_dev/linux-build
+# ./configure --enable-linux-builtin --with-linux=$LINUX_DIR --with-linux-obj=$LINUX_DIR_OBJ
+# ./copy-builtin $LINUX_DIR_OBJ
+
 
 config:
 	mkdir -p $(KBUILD_DIR)
@@ -45,6 +57,23 @@ menuconfig:
 	make -C $(LINUX_DIR) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) O=../$(KBUILD_DIR) $(CORES) menuconfig
 
 
+prepare:
+	mkdir -p $(KBUILD_DIR)
+# ./kernel-armv7 bash -c 'make -C $(LINUX_DIR) O=../$(KBUILD_DIR) $(CORES) menuconfig'
+	make -C $(LINUX_DIR) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) O=../$(KBUILD_DIR) $(CORES) prepare
+
+
+modules_prepare:
+	mkdir -p $(KBUILD_DIR)
+# ./kernel-armv7 bash -c 'make -C $(LINUX_DIR) O=../$(KBUILD_DIR) $(CORES) menuconfig'
+	make -C $(LINUX_DIR) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) O=../$(KBUILD_DIR) $(CORES) modules_prepare
+
+
+clean:
+	mkdir -p $(KBUILD_DIR)
+# ./kernel-armv7 bash -c 'make -C $(LINUX_DIR) O=../$(KBUILD_DIR) $(CORES) menuconfig'
+	make -C $(LINUX_DIR) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) O=../$(KBUILD_DIR) $(CORES) clean
+
 
 kernel:
 	mkdir -p $(KERNEL_MODULES)
@@ -61,7 +90,7 @@ kernel_dtb:
 
 
 kernel_bootimg:
-	./mkbootimg/mkbootimg --kernel zImage --ramdisk /dev/null --output zImage-616
+	./mkbootimg/mkbootimg --kernel zImage --ramdisk /dev/null --output zImage-652
 
 
 copy_lib:
