@@ -1,0 +1,10 @@
+CONFIG_ARM_APPENDED_DTB=y
+# CONFIG_ATAGS is not set
+CONFIG_AUTOFS_FS=y
+CONFIG_CMDLINE="android.kerneltype=normal androidboot.serialno=015d4906e123f807 video=tegrafb fbcon=map:0 gpt gpt_sector=15073279 console=tty1 console=ttyS0,115200n8 no_console_suspend=1 root=/dev/sda1 rootfstype=ext4 rw rootwait fsck.repair=yes"
+CONFIG_SENSORS_GPIO_FAN=m
+CONFIG_SENSORS_PWM_FAN=m
+# CONFIG_ARM_ATAG_DTB_COMPAT is not set
+# CONFIG_CMDLINE_EXTEND is not set
+# CONFIG_CMDLINE_FORCE is not set
+CONFIG_CMDLINE_FROM_BOOTLOADER=y
