@@ -56,7 +56,7 @@ export SUBLEVEL := $(shell cat $(LINUX_DIR)/Makefile | grep -m 1 "SUBLEVEL = " |
 		clean									\
 		kernel				kernel_dtb			\
 		kernel_bootimg					 		\
-		copy_lib						 		\
+		copy_kernel			copy_lib			\
 		clean_kernel 		reset_kernel		\
 
 
@@ -81,9 +81,11 @@ config_patch:
 # 	patch $(KBUILD_DIR)/.config linux-config/config.patch; \
 # fi
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/docker.fragment
+	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/iptables_qos.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/notuner.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/ouya.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/usbserial.fragment
+
 
 menuconfig:
 	mkdir -p $(KBUILD_DIR)
@@ -154,6 +156,10 @@ kernel_bootimg:
 	./mkbootimg/mkbootimg --kernel zImage-$(VERSION)$(PATCHLEVEL)$(SUBLEVEL) --ramdisk /dev/null --output zImage
 
 
+copy_kernel:
+	rsync -ac zImage francescodellorso@macmini:/Volumes/Develop/ouya_dev
+
+
 copy_lib:
 # MACOS
 # sudo mkdir -p /Volumes/ouyahdd
@@ -162,16 +168,18 @@ copy_lib:
 # sudo umount /Volumes/ouyahdd/
 
 # LINUX
-	sudo mkdir -p $(OUYA_HDD_MOUNT)
-	sudo mount /dev/disk/by-uuid/a5af45bc-bed3-4c69-8313-d407d75bc101 $(OUYA_HDD_MOUNT)
-	sudo cp -RP $(KERNEL_MODULES)/lib/modules/* $(OUYA_HDD_MOUNT)/lib/modules/
-	sudo umount $(OUYA_HDD_MOUNT)
+# sudo mkdir -p $(OUYA_HDD_MOUNT)
+# sudo mount /dev/disk/by-uuid/a5af45bc-bed3-4c69-8313-d407d75bc101 $(OUYA_HDD_MOUNT)
+# sudo cp -RP $(KERNEL_MODULES)/lib/modules/* $(OUYA_HDD_MOUNT)/lib/modules/
+# sudo umount $(OUYA_HDD_MOUNT)
+	rsync -ac $(KERNEL_MODULES)/lib/modules/* root@alarm.local:/lib/modules
 
 
 clean_kernel:
 	rm -rf $(KBUILD_DIR)
 	rm -rf $(KERNEL_MODULES)
 	rm -rf $(KERNEL_DTBS)
+	rm -rf ./zImage*
 
 
 reset_kernel:
