@@ -1,8 +1,7 @@
 # TODO
-# extract version from Makefile and use to name zImage and copy right LIB folder
 # create FULL IPTABLE fragment
-# test 6.6.0 kver
-# learn to use dockcross
+# scripts/lts-update.sh for LTS kernel bumps
+
 
 export LINUX_DIR			:= linux
 # export LINUX_DIR			:= kernel
@@ -11,6 +10,7 @@ export KERNEL_MODULES		:= linux-modules
 export KERNEL_DTBS			:= linux-dtbs
 export OUYA_HDD_MOUNT		:= /mnt/linux
 export OUYA_HDD_ID			:= 
+export DEPLOY_HOST 			?=
 
 
 export NPROCS:=8
@@ -28,8 +28,17 @@ export ARCH					:= arm
 export CROSS_COMPILE		:= arm-linux-gnueabihf-
 
 
-export RULES_DIR      ?= ./rules
-export PATCHES_DIR    ?= ./patches
+# OUYA boot image offsets (Tegra30)
+export BOOTIMG_BASE          := 0x10000000
+export BOOTIMG_KERNEL_OFFSET := 0x00008000
+export BOOTIMG_RAMDISK_OFFSET:= 0x01000000
+export BOOTIMG_SECOND_OFFSET := 0x00f00000
+export BOOTIMG_TAGS_OFFSET   := 0x00000100
+export BOOTIMG_PAGESIZE      := 2048
+
+
+# export RULES_DIR      ?= ./rules
+# export PATCHES_DIR    ?= ./patches
 export KERNEL_DIR     ?= $(LINUX_DIR)
 export CONFIG_TARGET  ?= menuconfig
 export ALL_TARGET     ?= tegra_defconfig
@@ -37,10 +46,10 @@ export ALL_TARGET     ?= tegra_defconfig
 
 export MERGE_KCONFIG  := $(KERNEL_DIR)/scripts/kconfig/merge_config.sh
 export DIFF_KCONFIG   := $(KERNEL_DIR)/scripts/diffconfig
-export RULES          := $(wildcard $(RULES_DIR)/*)
-export PATCHES        := $(wildcard $(PATCHES_DIR)/*)
+# export RULES          := $(wildcard $(RULES_DIR)/*)
+# export PATCHES        := $(wildcard $(PATCHES_DIR)/*)
 export CONFIG         := $(KBUILD_DIR)/.config
-export PATCHED_CONFIG := $(KBUILD_DIR)/.patched_config
+# export PATCHED_CONFIG := $(KBUILD_DIR)/.patched_config
 export NEW_CONFIG     := $(KBUILD_DIR)/.new_config
 
 
@@ -156,16 +165,21 @@ kernel:
 
 
 kernel_dtb:
-	cp $(KBUILD_DIR)/arch/arm/boot/zImage ./zImage-$(VERSION)$(PATCHLEVEL)$(SUBLEVEL)
-	cat $(KERNEL_DTBS)/tegra30-ouya.dtb >> ./zImage-$(VERSION)$(PATCHLEVEL)$(SUBLEVEL)
+	cp $(KBUILD_DIR)/arch/arm/boot/zImage ./zImage-$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)
+	cat $(KERNEL_DTBS)/tegra30-ouya.dtb >> ./zImage-$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)
 
 
 kernel_bootimg:
-	./mkbootimg/mkbootimg --kernel zImage-$(VERSION)$(PATCHLEVEL)$(SUBLEVEL) --ramdisk /dev/null --output zImage
-
-
-copy_kernel:
-	rsync -ac zImage francescodellorso@macmini:/Volumes/Develop/ouya_dev
+	./mkbootimg/mkbootimg \
+		--kernel zImage-$(VERSION).$(PATCHLEVEL).$(SUBLEVEL) \
+		--ramdisk /dev/null \
+		--base $(BOOTIMG_BASE) \
+		--kernel_offset $(BOOTIMG_KERNEL_OFFSET) \
+		--ramdisk_offset $(BOOTIMG_RAMDISK_OFFSET) \
+		--second_offset $(BOOTIMG_SECOND_OFFSET) \
+		--tags_offset $(BOOTIMG_TAGS_OFFSET) \
+		--pagesize $(BOOTIMG_PAGESIZE) \
+		--output zImage
 
 
 mkbootimg_bin:
@@ -192,6 +206,11 @@ dockcross-build:
 dockcross-rebuild:
 	docker pull dockcross/linux-armv7
 	docker build --no-cache -t linux-kernel-armv7 dockcross/
+
+
+copy_kernel:
+	@[ -n "$(DEPLOY_HOST)" ] || (echo "ERROR: DEPLOY_HOST not set. Usage: make copy_kernel DEPLOY_HOST=user@host:/path" && exit 1)
+	rsync -ac zImage $(DEPLOY_HOST)
 
 
 copy_lib:
