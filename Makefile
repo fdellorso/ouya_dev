@@ -58,6 +58,9 @@ export SUBLEVEL := $(shell cat $(LINUX_DIR)/Makefile | grep -m 1 "SUBLEVEL = " |
 		kernel_bootimg					 		\
 		copy_kernel			copy_lib			\
 		clean_kernel 		reset_kernel		\
+		mkbootimg_bin							\
+		submodule-linux		submodule-mkbootimg	\
+		submodule-all
 
 
 # ZFS
@@ -158,6 +161,23 @@ kernel_bootimg:
 
 copy_kernel:
 	rsync -ac zImage francescodellorso@macmini:/Volumes/Develop/ouya_dev
+
+
+mkbootimg_bin:
+	$(MAKE) -C mkbootimg CFLAGS="-ffunction-sections -O3 -Wno-error=stringop-overflow -Wno-stringop-overflow"
+
+
+submodule-linux:
+	git submodule update --init --depth 1 linux
+	cd linux && git fetch --depth 1 origin tag v6.12.91 && git checkout v6.12.91
+
+
+submodule-mkbootimg:
+	git submodule update --init mkbootimg
+	cd mkbootimg && git checkout master
+
+
+submodule-all: submodule-linux submodule-mkbootimg
 
 
 copy_lib:
