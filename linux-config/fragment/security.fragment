@@ -1,0 +1,2 @@
+# CONFIG_SECURITY_IPE is not set
+CONFIG_LSM="landlock,lockdown,yama,safesetid,apparmor,selinux,bpf"

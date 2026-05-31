@@ -2,3 +2,4 @@ linux-build/
 linux-modules/
 linux-dtbs/
 zImage
+build.log
