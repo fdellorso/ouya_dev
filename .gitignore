@@ -3,3 +3,4 @@ linux-modules/
 linux-dtbs/
 zImage
 build.log
+zImage-*
