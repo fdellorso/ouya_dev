@@ -60,7 +60,8 @@ export SUBLEVEL := $(shell cat $(LINUX_DIR)/Makefile | grep -m 1 "SUBLEVEL = " |
 		clean_kernel 		reset_kernel		\
 		mkbootimg_bin							\
 		submodule-linux		submodule-mkbootimg	\
-		submodule-all
+		submodule-all							\
+		dockcross-build		dockcross-rebuild	
 
 
 # ZFS
@@ -178,6 +179,15 @@ submodule-mkbootimg:
 
 
 submodule-all: submodule-linux submodule-mkbootimg
+
+
+dockcross-build:
+	docker build -t linux-kernel-armv7 dockcross/
+
+
+dockcross-rebuild:
+	docker pull dockcross/linux-armv7
+	docker build --no-cache -t linux-kernel-armv7 dockcross/
 
 
 copy_lib:
