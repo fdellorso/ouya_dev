@@ -89,6 +89,9 @@ config_patch:
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/notuner.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/ouya.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/usbserial.fragment
+	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/wireless.fragment
+	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/bluetooth.fragment
+	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/usb_gadget.fragment
 
 
 menuconfig:
