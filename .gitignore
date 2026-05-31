@@ -1,5 +1,4 @@
 linux-build/
 linux-modules/
 linux-dtbs/
-ouya-patch/.config
 zImage
