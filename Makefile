@@ -26,6 +26,10 @@ export OS:=$(shell uname -s)
 export CORES				:= -j$(NPROCS)
 export ARCH					:= arm
 export CROSS_COMPILE		:= arm-linux-gnueabihf-
+# export CROSS_COMPILE        := ccache arm-linux-gnueabihf-
+export CCACHE_DIR           := $(HOME)/.ccache
+export PATH                 := /usr/lib/ccache:$(PATH)
+export DOCKCROSS 			:= ./dockcross/kernel-armv7 -e CCACHE_DIR=/work/.ccache
 
 
 # OUYA boot image offsets (Tegra30)
