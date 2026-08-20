@@ -2,7 +2,7 @@
 
 ## Project
 
-Custom mainline Linux kernel for the OUYA console (Tegra30/ARMv7), built via dockcross cross-compilation. Currently tracking kernel v6.12.x LTS, after a v6.12 attempt was reverted due to a USB host instability regression (see docs/ISSUES.md).
+Custom mainline Linux kernel for the OUYA console (Tegra30/ARMv7), built via dockcross cross-compilation. Currently tracking kernel v6.12.x LTS, after a v6.12 attempt was reverted due to a USB host instability regression (see docs/AUDIT_REPORT_V2.md).
 
 ## Critical context
 

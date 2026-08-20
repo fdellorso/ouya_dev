@@ -21,7 +21,7 @@ Each fragment in `linux-config/fragment/` is scoped to one concern (wireless, bl
 
 ## Known issue: USB host instability on mainline ≥6.6
 
-External USB host port reset-loops, preventing root filesystem mount from USB. Root cause: mainline `tegra30-ouya.dts` lacks USB PHY trim parameters present in the decatf/postmarketOS fork (`nvidia,xcvr-setup`, `nvidia,xcvr-hsslew`, `nvidia,hsdiscon-level`, `nvidia,idle-wait-delay`, etc. on `usb-phy@7d004000` and `usb-phy@7d008000`). Compare against https://github.com/decatf/linux DTS before assuming it's a config or rootfs issue.
+External USB host port reset-loops, preventing root filesystem mount from USB. `tegra30-ouya.dts` inherits USB PHY parameters (`nvidia,xcvr-setup`, `nvidia,hsdiscon-level`, etc.) from `tegra30.dtsi` via DTS overlay merge — they are NOT absent. The instability may be caused by incorrect VALUES for these parameters compared to the decatf/postmarketOS fork, which uses different trim values. Compare values against https://github.com/decatf/linux DTS and override in `tegra30-ouya.dts` if they differ.
 
 ## Debugging boot failures
 
