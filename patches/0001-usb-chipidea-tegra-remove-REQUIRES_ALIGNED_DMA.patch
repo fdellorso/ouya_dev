@@ -1,0 +1,14 @@
+diff --git a/drivers/usb/chipidea/ci_hdrc_tegra.c b/drivers/usb/chipidea/ci_hdrc_tegra.c
+index 8e78bf643e25..039e09996bc2 100644
+--- a/drivers/usb/chipidea/ci_hdrc_tegra.c
++++ b/drivers/usb/chipidea/ci_hdrc_tegra.c
+@@ -49,8 +49,7 @@ static const struct tegra_usb_soc_info tegra20_ehci_soc_info = {
+ };
+ 
+ static const struct tegra_usb_soc_info tegra30_ehci_soc_info = {
+-	.flags = CI_HDRC_REQUIRES_ALIGNED_DMA |
+-		 CI_HDRC_OVERRIDE_PHY_CONTROL |
++	.flags = CI_HDRC_OVERRIDE_PHY_CONTROL |
+ 		 CI_HDRC_SUPPORTS_RUNTIME_PM,
+ 	.dr_mode = USB_DR_MODE_HOST,
+ 	.txfifothresh = 16,

@@ -102,7 +102,7 @@ config_patch:
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/notuner.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/ouya.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/usbserial.fragment
-	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/wireless.fragment
+# KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/wireless.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/bluetooth.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/usb_gadget.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/security.fragment
@@ -192,7 +192,7 @@ mkbootimg_bin:
 
 submodule-linux:
 	git submodule update --init --depth 1 linux
-	cd linux && git fetch --depth 1 origin tag v6.12.91 && git checkout v6.12.91
+	cd linux && git fetch --depth 1 origin tag v6.12.104 && git checkout v6.12.104
 
 
 submodule-mkbootimg:
@@ -201,6 +201,11 @@ submodule-mkbootimg:
 
 
 submodule-all: submodule-linux submodule-mkbootimg
+
+
+apply_patches:
+	cd $(LINUX_DIR) && git apply ../patches/0001-usb-chipidea-tegra-remove-REQUIRES_ALIGNED_DMA.patch
+	cd $(LINUX_DIR) && git apply ../patches/0002-usb-chipidea-host-revert-DMA-alignment-to-v6.6.1.patch
 
 
 dockcross-build:
