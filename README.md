@@ -1,201 +1,284 @@
 # ouya_dev
 
-Custom Linux kernel build system for the [OUYA](https://en.wikipedia.org/wiki/Ouya) game console (Tegra30 / ARMv7).
+Kernel Linux mainline personalizzato per la console [OUYA](https://en.wikipedia.org/wiki/Ouya) (Tegra30 / ARMv7).
 
-The OUYA runs a stock Android kernel. This project replaces it with a mainline Linux kernel (currently tracking the **6.12.x LTS** series), enabling Arch Linux ARM with Docker support, proper iptables/nftables, thermal management, wireless, Bluetooth, and USB gadget ethernet.
+La console OUYA esce di fabbrica con un kernel Android stock. Questo progetto lo sostituisce con un kernel Linux mainline (attualmente la serie **6.12.x LTS**), abilitando distribuzioni Linux complete (Void Linux, Arch Linux ARM, ecc.) con supporto a Docker, Podman, wireless, Bluetooth, gestione termica, iptables/nftables e USB gadget ethernet.
 
 ## Hardware
 
-| Component | Detail |
-|-----------|--------|
+| Componente | Dettaglio |
+|------------|-----------|
 | SoC | NVIDIA Tegra30 (ARMv7) |
 | RAM | 1 GB |
-| Storage | Internal eMMC + USB HDD (root) |
+| Storage | eMMC interno + HDD USB (root) |
 | WiFi | Broadcom BCM4330 (brcmfmac SDIO) |
 | Bluetooth | Broadcom BCM4330 (HCI UART) |
 | Audio | Wolfson WM8903 |
 
-## Requirements
+## Funzionalità kernel attive
 
-- Docker (for cross-compilation via dockcross)
-- `adb` and `fastboot` (from `android-tools`)
-- `rsync` (for deploying modules)
-- `arm-linux-gnueabihf-` toolchain (provided by dockcross image)
+### Wireless
 
-## Repository structure
+- Driver **brcmfmac** (modulo) per BCM4330 via SDIO
+- CFG80211 + MAC80211 + RFKILL abilitati
+- **Firmware proprietario richiesto** su rootfs (vedi sezione [Firmware](#firmware))
 
-```
-ouya_dev/
-├── linux/                      # submodule — linux-stable v6.12.x LTS
-├── mkbootimg/                  # submodule — osm0sis/mkbootimg (C implementation)
-├── dockcross/                  # cross-compilation toolchain (see dockcross/README.md)
-├── linux-config/
-│   ├── fragment/               # kconfig fragments merged into final .config
-│   │   ├── ouya.fragment       # OUYA/Tegra30: DTB append, cmdline, fan, thermal
-│   │   ├── docker.fragment     # Docker runtime requirements
-│   │   ├── iptables_qos.fragment  # full iptables + nftables + QoS
-│   │   ├── wireless.fragment   # BCM4330 WiFi (brcmfmac SDIO)
-│   │   ├── bluetooth.fragment  # BCM4330 Bluetooth (HCI UART)
-│   │   ├── usb_gadget.fragment # USB gadget ethernet (RNDIS via configfs)
-│   │   ├── security.fragment   # LSM stack (AppArmor, SELinux, yama)
-│   │   ├── notuner.fragment    # disable unused DVB/tuner drivers
-│   │   └── usbserial.fragment  # USB serial adapters (CH341, CP210x)
-│   ├── check-config.sh         # validates .config against Docker requirements
-│   └── .config-ouya-patch      # full reference config from ouya-patch community
-├── patches/                    # kernel patches applied before build (git apply)
-├── scripts/
-│   ├── ouya_load_boot.sh       # flash kernel to OUYA via adb/fastboot
-│   └── lts-update.sh           # interactive LTS kernel version bump
-├── docs/
-│   └── BUILD_NOTES.md          # historical build notes and commands
-├── reference/
-│   ├── ouya-patch/             # community reference configs (pgwipeout)
-│   ├── linux-config-history/   # archived .config files and hardening fragment
-│   ├── postmarketos/           # postmarketOS device files (reference)
-│   ├── old_image/              # archived zImage binaries
-│   └── html/                   # archived OUYA web dashboard
-├── Makefile                    # main build system
-└── zImage                      # last successfully built and tested kernel image
-```
+### Bluetooth
 
-## Build workflow
+- Driver **HCIUART** con supporto BCM (modulo) per BCM4330 via UART
+- **HCIBTUSB** come fallback (modulo)
+- Profile: LE, HIDP, BNEP
+- Firmware caricato automaticamente dal modulo `btbcm` da `/lib/firmware/brcm/`
 
-### 1. First time setup
+### Container runtime
 
-Build the dockcross image and compile mkbootimg:
+Il kernel supporta Docker e Podman sia in modalità rootful che rootless.
 
-```bash
-# build cross-compilation Docker image
-make dockcross-build
+| Requisito kernel | Docker rootful | Docker rootless | Podman rootful | Podman rootless |
+|---|---|---|---|---|
+| Namespaces (NET, PID, IPC, UTS, USER) | `=y` | `=y` | `=y` | `=y` |
+| Cgroups (cpu, cpuset, device, freezer, pids, memory) | `=y` | `=y` | `=y` | `=y` |
+| Overlay FS | `=y` | `=y` | `=y` | `=y` |
+| OVERLAY_FS_INDEX | opzionale | **` =y`** | opzionale | **`=y`** |
+| Bridge + VETH + Netfilter | `=y` | `=y` | `=y` | `=y` |
+| TUN (`/dev/net/tun`) | non necessario | **`=y`** | non necessario | **`=y`** |
+| FUSE | opzionale | **`=m`** | opzionale | **`=m`** |
+| Seccomp + BPF | `=y` | `=y` | `=y` | `=y` |
 
-# compile mkbootimg
-make mkbootimg_bin
+- **Rootful**: usa un daemon con privilegi, networking via bridge/iptables
+- **Rootless**: usa `slirp4netns` o `pasta` per la rete (serve `CONFIG_TUN=y`), `fuse-overlayfs` o overlay nativo per lo storage
 
-# initialize submodules (if not already done)
-make submodule-all
-```
+### Networking
 
-### 2. Configure kernel
+- **iptables** completo: filter, nat, mangle, raw, security
+- **nftables**: modulo `NF_TABLES` con tutti i set rule
+- **QoS/TC**: HTB, CAKE, FQ_CODEL, NETEM, INGRESS e altri scheduler
+- **Bridge** con VLAN filtering, IGMP snooping, netfilter
+- **VETH, VXLAN, MACVLAN, IPVLAN** (con L3S)
+- **Netfilter avanzato**: conntrack, NAT, masquerade, mark, state, BPF match
+- **IPVS** per load balancing (modulo)
 
-Generate base config from Tegra defconfig, then apply all fragments:
+### USB
 
-```bash
-make config          # tegra_defconfig → linux-build/.config
-make config_patch    # merge all fragments into .config
-make menuconfig      # optional: interactive review
-```
+- **Host**: EHCI Tegra, XHCI Tegra, Chipidea (`=y`)
+- **Gadget**: RNDIS ethernet via configfs (per connessione host)
+- **Serial**: CH341, CP210x, PL2303 (moduli)
+- **Storage**: USB mass storage (`=y`)
+- **Note**: porta host USB richiede le [patch USB host](#patch-usb-host-kernel-662) per kernel ≥6.6.2
 
-### 3. Build kernel
+### Storage
 
-```bash
-make kernel          # builds zImage, modules, dtbs
-make kernel_dtb      # appends tegra30-ouya.dtb to zImage-X.XX.XX
-make kernel_bootimg  # wraps into Android boot image format → zImage
-```
+- **ext4**: con POSIX ACL e security attributes
+- **btrfs**: con POSIX ACL
+- **overlay**: per container (Docker/Podman)
+- **tmpfs**: con POSIX ACL e extended attributes
+- **devtmpfs** con auto-mount
+- **FUSE**: modulo (per fuse-overlayfs in rootless mode)
 
-### 4. Deploy
+### Thermal
 
-Flash via fastboot (OUYA must be in fastboot mode):
+- **GPIO fan** (modulo) + **PWM fan** (modulo)
+- **Bang-bang governor** (default termico)
 
-```bash
-bash scripts/ouya_load_boot.sh   # reboots to bootloader and fastboot boots zImage
-```
+### Security
 
-Deploy kernel modules to the running system:
+Stack LSM completo:
 
-```bash
-make copy_lib        # rsync modules to root@alarm.local:/lib/modules
-```
+- **SELinux** (default security module)
+- **AppArmor** (con export binario, hash, introspection)
+- **Landlock** (LSM non-privilegiato)
+- **Yama** (ptrace restriction)
+- **Safesetid**
+- **Lockdown LSM**
+- **BPF LSM**
 
-### Useful targets
+- **Seccomp** + seccomp filter
+- **Module signing**: SHA512 + RSA (verifica firma moduli)
+- **Audit** + audit syscall
 
-| Target | Description |
-|--------|-------------|
-| `make config` | Generate .config from tegra_defconfig |
-| `make config_patch` | Merge all fragments into .config |
-| `make menuconfig` | Interactive kernel configuration |
-| `make kernel` | Full kernel build (zImage + modules + dtbs) |
-| `make kernel_dtb` | Append DTB to zImage |
-| `make kernel_bootimg` | Wrap into Android boot image |
-| `make copy_kernel DEPLOY_HOST=user@host:/path` | Deploy zImage via rsync |
-| `make copy_lib` | Deploy modules via rsync to root@alarm.local |
-| `make clean` | Clean build artifacts |
-| `make clean_kernel` | Remove all build directories and zImage |
-| `make reset_kernel` | Hard reset linux submodule |
-| `make mkbootimg_bin` | Compile mkbootimg from submodule |
-| `make submodule-linux` | Init/update linux submodule |
-| `make submodule-mkbootimg` | Init/update mkbootimg submodule |
-| `make submodule-all` | Init/update all submodules |
-| `make dockcross-build` | Build cross-compilation Docker image |
-| `make dockcross-rebuild` | Pull base image and rebuild |
+### Audio
 
-## Kernel configuration
+- **Wolfson WM8903** via Tegra ASoC (driver integrato nel defconfig)
 
-The final `.config` is built by merging fragments in this order:
+## Fragment kernel
 
-1. `tegra_defconfig` (base — includes Tegra30 drivers, cpuidle, thermal, audio)
-2. `docker.fragment` (cgroups v1/v2, namespaces, overlay, netfilter, memcg)
-3. `iptables_qos.fragment` (full iptables/nftables/QoS stack)
-4. `notuner.fragment` (disable unused DVB/media tuners)
-5. `ouya.fragment` (DTB append, cmdline force, GPIO fan, thermal bang_bang)
-6. `usbserial.fragment` (CH341, CP210x)
-7. `wireless.fragment` (brcmfmac SDIO — BCM4330)
-8. `bluetooth.fragment` (BT HCI UART BCM — BCM4330)
-9. `usb_gadget.fragment` (RNDIS ethernet via configfs)
-10. `security.fragment` (LSM: landlock, lockdown, yama, safesetid, apparmor, selinux, bpf)
+Il `.config` finale è generato combinando `tegra_defconfig` (base) con i seguenti fragment:
 
-To validate Docker compatibility after configuration:
+| # | Fragment | Contenuto |
+|---|----------|-----------|
+| 1 | `docker.fragment` | Cgroups v1/v2, namespaces, overlay, netfilter, memcg, FUSE |
+| 2 | `iptables_qos.fragment` | iptables/nftables completo + QoS/TC |
+| 3 | `notuner.fragment` | Disabilita DVB/TV/radio (mantiene VDE e webcam USB) |
+| 4 | `ouya.fragment` | DTB append, cmdline force, GPIO fan, thermal bang_bang |
+| 5 | `usbserial.fragment` | CH341, CP210x, PL2303 |
+| 6 | `bluetooth.fragment` | BT HCI UART BCM per BCM4330 |
+| 7 | `usb_gadget.fragment` | RNDIS ethernet via configfs |
+| 8 | `rootless.fragment` | TUN (built-in), OVERLAY_FS_INDEX (per Docker/Podman rootless) |
+| 9 | `security.fragment` | LSM stack, module signing, lockdown |
+
+**Nota:** `wireless.fragment` è 100% ridondante con `tegra_defconfig` ed è stato commentato nel `config_patch`.
+
+Per validare la compatibilità Docker dopo la configurazione:
 
 ```bash
 bash linux-config/check-config.sh linux-build/.config
 ```
 
+## Patch USB host (kernel ≥6.6.2)
+
+### Problema
+
+Il kernel Linux ≥6.6.2 causa un **reset-loop sulla porta USB host** della console OUYA. Quando una periferica USB viene collegata alla porta host, il controller USB entra in un ciclo infinito di reset, rendendo la periferica inutilizzabile.
+
+Con kernel ≤6.6.1 il problema non si presenta.
+
+### Root cause
+
+Il commit `38a41a0c0272` ("usb: chipidea: Fix DMA overwrite for Tegra"), backportato in v6.6.2, ha modificato il meccanismo di bounce buffer DMA in `drivers/usb/chipidea/host.c`. Il controller USB Tegra30 EHCI non gestisce correttamente le allocazioni aggiuntive di bounce buffer introdotte dal nuovo codice.
+
+### Soluzione
+
+Due patch in `patches/`:
+
+1. **`0001-usb-chipidea-tegra-remove-REQUIRES_ALIGNED_DMA.patch`** — rimuove il flag `CI_HDRC_REQUIRES_ALIGNED_DMA` da `tegra30_ehci_soc_info` in `ci_hdrc_tegra.c`
+
+2. **`0002-usb-chipidea-host-revert-DMA-alignment-to-v6.6.1.patch`** — riporta il codice DMA alignment in `host.c` allo stato di v6.6.1
+
+### Applicazione
+
+Le patch vengono applicate automaticamente dopo il checkout del kernel:
+
+```bash
+make submodule-linux       # checkout v6.12.104
+make apply_patches         # applica le 2 patch USB host
+make config
+make config_patch
+make kernel
+```
+
+### Versioni testate
+
+| Versione | Stato |
+|---|---|
+| v6.6.1 | Funziona senza patch |
+| v6.6.2 | Reset-loop (risolto con patch) |
+| v6.12.104 | Reset-loop (risolto con patch) |
+| v7.x | Richiede un revert parziale diverso di host.c |
+
 ## Firmware
 
-The BCM4330 WiFi and Bluetooth require proprietary firmware files that are **not included** in the kernel and must be installed on the root filesystem of the OUYA.
+Il BCM4330 WiFi e Bluetooth richiedono firmware proprietari **non inclusi nel kernel** che vanno installati sul root filesystem.
 
 ### WiFi (brcmfmac)
 
-Place the following files on the OUYA at `/lib/firmware/brcm/`:
+Posizionare i seguenti file in `/lib/firmware/brcm/` sull'OUYA:
 
-| File | Description |
+| File | Descrizione |
 |------|-------------|
-| `brcmfmac4330-sdio.bin` | BCM4330 firmware binary |
-| `brcmfmac4330-sdio.txt` | BCM4330 NVRAM configuration |
+| `brcmfmac4330-sdio.bin` | Firmware binario BCM4330 |
+| `brcmfmac4330-sdio.txt` | Configurazione NVRAM BCM4330 |
 
-Source: [milaq/android_vendor_boxer8_ouya](https://github.com/milaq/android_vendor_boxer8_ouya) and [milaq/android_device_boxer8_ouya](https://github.com/milaq/android_device_boxer8_ouya) (see `reference/postmarketos/APKBUILD` for exact commits).
+Fonte: [milaq/android_vendor_boxer8_ouya](https://github.com/milaq/android_vendor_boxer8_ouya) e [milaq/android_device_boxer8_ouya](https://github.com/milaq/android_device_boxer8_ouya) (vedere `reference/postmarketos/APKBUILD` per i commit esatti).
 
 ### Bluetooth
 
-The BCM4330 Bluetooth firmware is loaded automatically via `btbcm` kernel module from `/lib/firmware/brcm/`. The exact firmware file depends on the kernel version — check `dmesg` after boot for the filename requested.
+Il firmware BCM4330 Bluetooth viene caricato automaticamente dal modulo `btbcm` da `/lib/firmware/brcm/`. Il file esatto dipende dalla versione del kernel — controllare `dmesg` dopo il boot per il nome del file richiesto.
 
 ## Boot process
 
-The OUYA bootloader (Tegra CBoot) does not boot a raw zImage. The kernel must be wrapped in an Android boot image format (no ramdisk). The boot image is loaded temporarily into RAM via `fastboot boot` — there is no permanent boot partition written.
+Il bootloader OUYA (Tegra CBoot) non avvia un zImage raw. Il kernel deve essere wrappato in formato Android boot image (senza ramdisk). L'immagine viene caricata temporaneamente in RAM via `fastboot boot` — non viene scritta una partizione di boot permanente.
 
-The kernel cmdline is hardcoded in `ouya.fragment` (`CONFIG_CMDLINE_FORCE=y`) and includes the device serial number, GPT sector, root device (`/dev/sda1`), and framebuffer parameters. Update `CONFIG_CMDLINE` in `ouya.fragment` if your device serial number or root partition differs.
+La cmdline del kernel è hardcoded in `ouya.fragment` (`CONFIG_CMDLINE_FORCE=y`) e include il numero di seriale del dispositivo, i settori GPT, il root device (`/dev/sda1`) e i parametri del framebuffer. Aggiornare `CONFIG_CMDLINE` in `ouya.fragment` se il numero di seriale o la partizione root del dispositivo sono diversi.
 
-Boot image offsets (Tegra30, defined in Makefile):
+Offset boot image (Tegra30, definiti nel Makefile):
 
-| Parameter | Value |
-|-----------|-------|
+| Parametro | Valore |
+|-----------|--------|
 | base | `0x10000000` |
 | kernel_offset | `0x00008000` |
 | ramdisk_offset | `0x01000000` |
 | tags_offset | `0x00000100` |
 | pagesize | `2048` |
 
-## LTS kernel updates
+## Build workflow
 
-Use the interactive update script to bump to the next LTS version:
+### 1. Setup iniziale
+
+Costruire l'immagine dockcross e compilare mkbootimg:
+
+```bash
+make dockcross-build     # immagine Docker di cross-compilazione
+make mkbootimg_bin       # compila mkbootimg dal submodule
+make submodule-all       # inizializza tutti i submodule
+```
+
+### 2. Configurazione kernel
+
+Generare la config base da tegra_defconfig e applicare tutti i fragment:
+
+```bash
+make config              # tegra_defconfig → linux-build/.config
+make config_patch        # merge di tutti i fragment nel .config
+make menuconfig          # opzionale: revisione interattiva
+```
+
+### 3. Build kernel
+
+```bash
+make apply_patches       # applica patch USB host (per kernel ≥6.6.2)
+make kernel              # build zImage + moduli + dtbs
+make kernel_dtb          # append del tegra30-ouya.dtb al zImage
+make kernel_bootimg      # wrap in formato Android boot image → zImage
+```
+
+### 4. Deploy
+
+Flash via fastboot (OUYA deve essere in modalità fastboot):
+
+```bash
+bash scripts/ouya_load_boot.sh   # riavvia al bootloader e fastboot boot del zImage
+```
+
+Deploy dei moduli kernel sul sistema in esecuzione:
+
+```bash
+make copy_lib            # rsync moduli a root@alarm.local:/lib/modules
+```
+
+### Target utili
+
+| Target | Descrizione |
+|--------|-------------|
+| `make config` | Genera .config da tegra_defconfig |
+| `make config_patch` | Merge di tutti i fragment nel .config |
+| `make menuconfig` | Configurazione interattiva |
+| `make apply_patches` | Applica patch USB host fix |
+| `make kernel` | Build completo (zImage + moduli + dtbs) |
+| `make kernel_dtb` | Append DTB al zImage |
+| `make kernel_bootimg` | Wrap in Android boot image |
+| `make copy_kernel DEPLOY_HOST=user@host:/path` | Deploy zImage via rsync |
+| `make copy_lib` | Deploy moduli via rsync a root@alarm.local |
+| `make clean` | Pulisce artefatti di build |
+| `make clean_kernel` | Rimuove build dir e zImage |
+| `make reset_kernel` | Hard reset del submodule linux |
+| `make mkbootimg_bin` | Compila mkbootimg |
+| `make submodule-linux` | Init/update submodule linux |
+| `make submodule-mkbootimg` | Init/update submodule mkbootimg |
+| `make submodule-all` | Init/update tutti i submodule |
+| `make dockcross-build` | Build immagine Docker di cross-compilazione |
+| `make dockcross-rebuild` | Pull immagine base e rebuild |
+
+## Aggiornamento LTS
+
+Usare lo script interattivo per aggiornare alla prossima versione LTS:
 
 ```bash
 bash scripts/lts-update.sh
 ```
 
-The script checks available LTS tags, shows a summary, asks for confirmation, updates the submodule, and creates a commit.
+Lo script verifica le tag LTS disponibili, mostra un riepilogo, chiede conferma, aggiorna il submodule e crea un commit.
 
-To update manually:
+Aggiornamento manuale:
 
 ```bash
 cd linux
@@ -206,10 +289,55 @@ git add linux
 git commit -m "linux: update to vX.XX.XX LTS"
 ```
 
-## References
+## Struttura del repository
 
-- [pgwipeout's OUYA kernel work](https://github.com/pgwipeout/ouya-kernel) — original Tegra30 config reference
-- [postmarketOS OUYA device](https://github.com/postmarketOS/pmaports) — device files and firmware sources
+```
+ouya_dev/
+├── linux/                      # submodule — linux-stable v6.12.x LTS
+├── mkbootimg/                  # submodule — osm0sis/mkbootimg (C implementation)
+├── dockcross/                  # cross-compilation toolchain
+├── linux-config/
+│   ├── fragment/               # kconfig fragment
+│   │   ├── docker.fragment     # Docker + FUSE
+│   │   ├── iptables_qos.fragment  # iptables/nftables + QoS
+│   │   ├── notuner.fragment    # disabilita DVB/TV/radio
+│   │   ├── ouya.fragment       # OUYA/Tegra30: DTB, cmdline, fan, thermal
+│   │   ├── usbserial.fragment  # CH341, CP210x, PL2303
+│   │   ├── bluetooth.fragment  # BCM4330 BT HCI UART
+│   │   ├── usb_gadget.fragment # RNDIS ethernet via configfs
+│   │   ├── rootless.fragment   # TUN + OVERLAY_FS_INDEX (Docker/Podman rootless)
+│   │   └── security.fragment   # LSM stack, module signing
+│   ├── check-config.sh         # validazione .config vs requisiti Docker
+│   └── .config-ouya-patch      # config completa di riferimento
+├── patches/                    # patch kernel applicate prima del build
+│   ├── 0001-usb-chipidea-tegra-remove-REQUIRES_ALIGNED_DMA.patch
+│   └── 0002-usb-chipidea-host-revert-DMA-alignment-to-v6.6.1.patch
+├── scripts/
+│   ├── ouya_load_boot.sh       # flash kernel via adb/fastboot
+│   └── lts-update.sh           # bump versione LTS
+├── docs/
+│   ├── USB_HOST_FIX.md         # documentazione fix USB host
+│   └── BUILD_NOTES.md          # note storiche di build
+├── reference/                  # materiali di riferimento (non modificare)
+│   ├── ouya-patch/             # config community (pgwipeout)
+│   ├── postmarketos/           # device file postmarketOS
+│   └── ...
+├── Makefile                    # build system
+└── zImage                      # ultimo zImage testato
+```
+
+## Limitazioni note
+
+- **USB host**: porta USB richiede patch per kernel ≥6.6.2
+- **FANOTIFY**: non abilitato (non necessario per questo use case)
+- **Huge pages**: non supportate (1GB RAM insufficiente per HUGETLB)
+- **MEMCG_SWAP**: rimosso dal kernel v5.8+ (lo swap accounting è sempre attivo)
+- **wireless.fragment**: ridondante con tegra_defconfig, commentato nel Makefile
+
+## Riferimenti
+
+- [pgwipeout ouya-kernel](https://github.com/pgwipeout/ouya-kernel) — config di riferimento Tegra30
+- [postmarketOS OUYA](https://github.com/postmarketOS/pmaports) — device file e firmware
 - [linux-stable](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git)
 - [osm0sis/mkbootimg](https://github.com/osm0sis/mkbootimg)
 - [dockcross](https://github.com/dockcross/dockcross)

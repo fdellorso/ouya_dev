@@ -1,0 +1,6 @@
+# Rootless container runtime requirements (Docker rootless, Podman rootless)
+# - TUN: /dev/net/tun per slirp4netns e pasta (networking rootless)
+# - OVERLAY_FS_INDEX: overlay nativo unprivileged per rootless storage
+CONFIG_TUN=y
+CONFIG_OVERLAY_FS_INDEX=y
+# CONFIG_TUN_VNET_CROSS_LE is not set
