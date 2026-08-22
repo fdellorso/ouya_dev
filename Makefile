@@ -104,6 +104,7 @@ config_patch:
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/usbserial.fragment
 # KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/wireless.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/bluetooth.fragment
+	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/iwd.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/usb_gadget.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/rootless.fragment
 	KCONFIG_CONFIG=$(CONFIG) $(MERGE_KCONFIG) -m -r $(CONFIG) linux-config/fragment/security.fragment
