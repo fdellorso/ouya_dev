@@ -2,7 +2,7 @@
 
 ## Project
 
-Custom mainline Linux kernel for the OUYA console (Tegra30/ARMv7), built via dockcross cross-compilation. Currently tracking kernel v6.12.x LTS, after a v6.12 attempt was reverted due to a USB host instability regression (see docs/AUDIT_REPORT_V2.md).
+Custom mainline Linux kernel for the OUYA console (Tegra30/ARMv7), built via dockcross cross-compilation. Currently tracking kernel v6.12.x LTS (submodule pinned at v6.12.104). An earlier v6.12 attempt had been reverted due to a USB host instability regression; the regression is now fixed via the patches in `patches/` — see `docs/USB_HOST_FIX.md` for the fix and `docs/AUDIT_REPORT_V2.md` for the audit history.
 
 ## Critical context
 
@@ -10,7 +10,7 @@ Custom mainline Linux kernel for the OUYA console (Tegra30/ARMv7), built via doc
 - `linux/` and `mkbootimg/` are git submodules. Never `git add` inside them without checking out a specific tag first.
 - The OUYA bootloader (Tegra CBoot) requires an Android bootimg wrapper (no ramdisk in our case) — see `make kernel_bootimg`.
 - `CONFIG_CMDLINE_FORCE=y` is intentional — cmdline is hardcoded in `ouya.fragment`, not from bootloader.
-- Known unresolved issue: USB host (`ci_hdrc`) reset-loops on mainline kernel ≥6.6.x when booting without an initramfs. Root caused to missing Tegra30 USB PHY trim parameters (`nvidia,xcvr-setup`, `nvidia,hsdiscon-level`, etc.) present in the community decatf/postmarketOS fork DTS but absent from mainline `tegra30-ouya.dts`. Fix in progress.
+- USB host (`ci_hdrc`) reset-loop on kernel ≥6.6.2: **resolved** by `patches/0001-*.patch` + `patches/0002-*.patch`, applied via `make apply_patches` (the `linux/` submodule is *expected* to look dirty while the patches are applied — don't "fix" it). Root cause is commit `38a41a0c0272` ("usb: chipidea: Fix DMA overwrite for Tegra"), a DMA bounce-buffer change in `drivers/usb/chipidea/host.c` that Tegra30 EHCI mishandles — **not** missing DTS PHY trim parameters (that theory is disproven in `docs/AUDIT_REPORT_V2.md`, §Correzioni 2). Verified on v6.6.2 and v6.12.104. For v7.x a different partial revert of `host.c` will be needed.
 
 ## Session continuity
 
