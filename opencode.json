@@ -2,6 +2,7 @@
   "$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
   "share": "manual",
+  "update": "auto",
   "skills": ["./.opencode/skills"],
   "watcher": {
     "ignore": [
@@ -20,17 +21,14 @@
     { "action": "shell", "resource": "make reset_kernel", "effect": "ask" },
     { "action": "shell", "resource": "rm -rf*", "effect": "ask" },
     { "action": "edit", "resource": "opencode.json", "effect": "ask" },
-    { "action": "edit", "resource": "tui.json", "effect": "ask" },
     { "action": "edit", "resource": ".opencode/commands/*", "effect": "ask" },
     { "action": "edit", "resource": ".opencode/skills/*", "effect": "ask" },
     { "action": "external_directory", "resource": "*", "effect": "ask" }
   ],
   "mcp": {
-    "servers": {
-      "serial": {
-        "type": "local",
-        "command": ["/home/fdellorso/.npm-global/bin/embedded-serial-mcp"]
-      }
+    "serial": {
+      "type": "local",
+      "command": ["/home/fdellorso/.npm-global/bin/embedded-serial-mcp"]
     }
   },
   "lsp": {
